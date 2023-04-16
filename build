@@ -1,2 +1,1 @@
-dasm main.s
-diskm8 -file-put a.out -with-disk disk.dsk
+dasm main.s && diskm8 -file-put a.out -with-disk disk.dsk
