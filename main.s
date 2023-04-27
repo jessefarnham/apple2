@@ -24,7 +24,7 @@
 
 
 ; my constants
-fieldbottom = #$9f
+fieldbottom = #$9e
 framebottom = fieldbottom + 1
 fieldleft = #$5b   ; 91 - evenly divisible by 7 so it's byte aligned
 frameleft = fieldleft - 1
@@ -39,7 +39,10 @@ frametop = fieldtop - 1
 fieldright = frameleft + (squaresize * framewidth) - 1
 frameright = fieldright + 1
 
-drawsquare  ;
+drawsquare
+; draws square at x = x, y = y
+; these numbers are in FIELD COORDINATES with origin at lower left
+; L = f
 
 
 ;external routines
