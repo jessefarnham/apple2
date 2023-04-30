@@ -69,8 +69,7 @@ initfieldmap
     sta fieldptr
     lda #fieldmapptrhi
     sta fieldptrhi
-    lda
-    ldx #frameheight + 4  ; add 4 extra rows above top of screen
+    ldx #fieldheight + 4  ; add 4 extra rows above top of screen
     ldy #$00
 initfieldmaploopleft
     lda #emptyrowleft
