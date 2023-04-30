@@ -1,7 +1,12 @@
     processor 6502
-    ; 0. Function to draw square
+    ; DONE 0. Function to draw square
     ; DONE 1. Frame
     ; 2. I shape and rotation data
+    ;   a. field memory representation
+    ;   b. function to draw field on screen
+    ;   c. shape memory representation
+    ;   d. rotation memory representation
+    ;   e. function to draw current shape at current location
     ; 3. Drop I to bottom
     ; 4. Shift
     ; 5. Rotate
@@ -32,19 +37,51 @@ frameleft = fieldleft - 1
 ; screen pixels per byte. Square-drawing code assumes this,
 ; so this cannot be changed without rewriting that code.
 squaresize = #$07
-framewidth = #$0A  ; 10 squares
-frameheight = #$14  ; 20 squares
-fieldtop = framebottom - (squaresize * frameheight) + 1
+fieldwidth = #$0A  ; 10 squares
+fieldheight = #$14  ; 20 squares
+fieldtop = framebottom - (squaresize * fieldheight) + 1
 frametop = fieldtop - 1
-fieldright = frameleft + (squaresize * framewidth) - 1
+fieldright = frameleft + (squaresize * fieldwidth) - 1
 frameright = fieldright + 1
-; these are only to be used in leaf routines (with no JSRs)
+emptyrowleft = #$80  ; 1000 0000
+emptyrowright = #$3f  ; 0011 1111
+
+
+; my memory locations
+; these temp vars are only to be used in leaf routines (with no JSRs)
 temp1 equ $06
 temp2 = $07
 temp3 = $08
 temp4 = $09
+curshape = $eb
+curshapex = $ec
+curshapey = $ed
+fieldptr = $ee
+fieldptrhi = $ef
 squaremask = #$3f  ; for turning on screen byte except rightmost pixel
 bytemask = #$7f  ; for turning on an entire screen byte
+fieldmapptrhi = #$80  ; fieldmap starts at $8000
+fieldmapptrlo = #$00
+
+
+initfieldmap
+    lda #fieldmapptrlo
+    sta fieldptr
+    lda #fieldmapptrhi
+    sta fieldptrhi
+    lda
+    ldx #frameheight + 4  ; add 4 extra rows above top of screen
+    ldy #$00
+initfieldmaploopleft
+    lda #emptyrowleft
+    sta (fieldptr),y
+    iny
+    lda #emptyrowright
+    sta (fieldptr),y
+    iny
+    dex
+    bne initfieldmaploopleft
+    rts
 
 
 drawsquare
@@ -128,6 +165,7 @@ hposn   equ $f411
 hlin    equ $f53a
 shnum   equ $f730
 draw    equ $f601
+delay   equ $fca8
 
 
 ;memory locations
@@ -190,6 +228,9 @@ start   jsr hgr
         ldx #$01
         ldy #$01
         jsr drawsquare
+
+        ; initialize field map
+        jsr initfieldmap
     rts
 
 ; utilities
