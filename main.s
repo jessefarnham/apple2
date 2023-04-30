@@ -64,45 +64,21 @@ fieldptrhilit = #$80  ; fieldmap starts at $8000
 fieldptrlolit = #$00
 
 
-; shape table encoding:
-; The two highest bits tell how to rotate the shape.
-; 00 = keep shape number the same (only for square)
-; 01 = incrememt shape number
-; 10 = decrement shape number
-; 11 = decrement shape number 3 times
-; The next 6 bits tell you where to move from the
-; starting square to draw the other three squares.
-; 00 = move right
-; 01 = move left
-; 10 = move up
-; 11 = move down and right
-
-
-shapetable
-    ; shape 0: 01101010 = 6A
-    ; |
-    ; |
-    ; |
-    ; |
-    hex $6a
-    ; shape 1: 10000000 = 80
-    ; ----
-    hex $80
-
-
 drawshape
 ; draws the shape with ID stored in $curshape
 ; at location stored in $curshapex, $curshapey (field coordinates)
     lda #$04
     sta shapesquarecounter
-    ldy $curshape
-    lda (shapetable),y
-    ldx $curshapex
-    ldy $curshapey
+    ldy curshape
+    lda shapetable,y
+    ldx curshapex
+    ldy curshapey
+
 drawshapeloop
     jsr drawsquare
     asl ; get rid of rotation bits
     asl
+    pha  ; post-shift, pre-anding value
     and #$c0  ; keep only top two bits
     cmp #$00  ; move right
     bne checkleft
@@ -121,6 +97,7 @@ checkdownright
     dey
     inx
 afterchecks
+    pla  ; restore post-shift, pre-anding A value
     dec shapesquarecounter
     bne drawshapeloop
     rts
@@ -146,7 +123,7 @@ initfieldmaploopleft
     rts
 
 drawsquare
-; draws square at x = x, y = y
+; draws square at x = x, y = y, leaving x, y, and a unchanged
 
 ; these numbers are in FIELD COORDINATES with origin at lower left
 
@@ -170,7 +147,11 @@ drawsquare
 ; = yaddress(fieldbottom - ((Y << 3) - Y))
 ;
 ; Calculate start-of-row byte for bottom row of square (smart version)
+    pha
+    txa
+    pha
     tya
+    pha
     asl
     asl
     asl
@@ -210,6 +191,11 @@ squareloop
     dec temp2
     dec temp3
     bne squareloop
+    pla  ; original y
+    tay
+    pla  ; original x
+    tax
+    pla  ; original a
     rts
 
 
@@ -265,39 +251,16 @@ start   jsr hgr
         ldy #framebottom
         jsr hlin
 
-        ; scale line (remove later)
-        ldx #fieldleft
-        ldy #$0
-        lda (#framebottom + #frametop) / 2
-        jsr hplot
-        lda #fieldleft + #squaresize - 1
-        ldx #$0
-        ldy (#framebottom + #frametop) / 2
-        jsr hlin
-
-        ; example of coloring a single byte
-        lda (#frametop + #framebottom) / 2 + 2
-        jsr yaddress
-        lda #bytemask  ; all dots on
-        ldy #fieldleft / 7
-        sta (gbas),y
-
-        ; example of drawing squares 0,0 and 1,1
-        ldx #$00
-        ldy #$00
-        jsr drawsquare
-        ldx #$01
-        ldy #$01
-        jsr drawsquare
-
         ; initialize field map
         jsr initfieldmap
 
-        ; draw an I at 5, 10
+        ; draw an I at 5, 0
         lda #$00
         sta curshape
-        ldx #$05
-        ldy #$0A
+        lda #$05
+        sta curshapex
+        lda #$00
+        sta curshapey
         jsr drawshape
     rts
 
@@ -328,3 +291,40 @@ yaddress
     ora hpag
     sta gbas+1
     rts
+
+
+; shape table encoding:
+; The two highest bits tell how to rotate the shape.
+; 00 = keep shape number the same (only for square)
+; 01 = incrememt shape number
+; 10 = decrement shape number
+; 11 = decrement shape number 3 times
+; The next 6 bits tell you where to move from the
+; starting square to draw the other three squares.
+; 00 = move right
+; 01 = move left
+; 10 = move up
+; 11 = move down and right
+
+
+
+shapetable
+    ; shape 0: 01101010 = 6a
+    ; |
+    ; |
+    ; |
+    ; |
+    hex 6a
+    ; shape 1: 10000000 = 80
+    ; ----
+    hex 80
+    ; shape 2: 01001000 = 48
+    ;  --
+    ; --
+    hex 48
+    ; shape 3: 10100110 = A6
+    ; |
+    ; ||
+    ;  |
+
+
