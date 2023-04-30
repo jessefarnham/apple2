@@ -2,13 +2,13 @@
     ; DONE 0. Function to draw square
     ; DONE 1. Frame
     ; 2. I shape and rotation data
-    ;   a. field memory representation
-    ;   c. shape memory representation
-    ;   d. rotation memory representation
+    ;   DONE a. field memory representation
+    ;   DONE c. shape memory representation
+    ;   DONE d. rotation memory representation
     ;   e. function to draw current shape at current location
-    ; 3. Drop I to bottom
-    ; 4. Shift
-    ; 5. Rotate
+    ; 3. Rotate
+    ; 4. Drop I to bottom
+    ; 5. Shift
     ; 6. Top out
     ; 7. Clear
     ; 8. Other shapes with random selection
@@ -57,6 +57,7 @@ curshapex = $ec
 curshapey = $ed
 fieldptr = $ee
 fieldptrhi = $ef
+shapesquarecounter = $fa
 squaremask = #$3f  ; for turning on screen byte except rightmost pixel
 bytemask = #$7f  ; for turning on an entire screen byte
 fieldptrhilit = #$80  ; fieldmap starts at $8000
@@ -89,6 +90,41 @@ shapetable
     hex $80
 
 
+drawshape
+; draws the shape with ID stored in $curshape
+; at location stored in $curshapex, $curshapey (field coordinates)
+    lda #$04
+    sta shapesquarecounter
+    ldy $curshape
+    lda (shapetable),y
+    ldx $curshapex
+    ldy $curshapey
+drawshapeloop
+    jsr drawsquare
+    asl ; get rid of rotation bits
+    asl
+    and #$c0  ; keep only top two bits
+    cmp #$00  ; move right
+    bne checkleft
+    inx
+checkleft
+    cmp #$40   ; move left
+    bne checkup
+    dex
+checkup
+    cmp #$80  ; move up
+    bne checkdownright
+    iny
+checkdownright
+    cmp #$c0
+    bne afterchecks
+    dey
+    inx
+afterchecks
+    dec shapesquarecounter
+    bne drawshapeloop
+    rts
+
 
 
 initfieldmap
@@ -108,13 +144,6 @@ initfieldmaploopleft
     dex
     bne initfieldmaploopleft
     rts
-
-
-drawshape
-; draws the shape with ID stored in $curshape
-; at location stored in $curshapex, $curshapey (field coordinates)
-
-
 
 drawsquare
 ; draws square at x = x, y = y
@@ -263,6 +292,13 @@ start   jsr hgr
 
         ; initialize field map
         jsr initfieldmap
+
+        ; draw an I at 5, 10
+        lda #$00
+        sta curshape
+        ldx #$05
+        ldy #$0A
+        jsr drawshape
     rts
 
 ; utilities
