@@ -103,16 +103,16 @@ drawsquare
     ; temp1 = offset to add to start-of-row byte
     ; temp2 = y coordinate of bottom row
     ; temp3 = row counter
+    ldy temp1
 squareloop
     lda temp2
     jsr yaddress
-    ldy temp1
     lda #squaremask
     sta (gbas),y
     dec temp2
     dec temp3
     bne squareloop
-rts
+    rts
 
 
 
