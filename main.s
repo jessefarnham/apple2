@@ -1,6 +1,6 @@
     processor 6502
     ; 0. Function to draw square
-    ; 1. Frame
+    ; DONE 1. Frame
     ; 2. I shape and rotation data
     ; 3. Drop I to bottom
     ; 4. Shift
@@ -30,7 +30,7 @@ fieldleft = #$5b   ; 91 - evenly divisible by 7 so it's byte aligned
 frameleft = fieldleft - 1
 ; not a coincidence that this is the number of
 ; screen pixels per byte. Square-drawing code assumes this,
-; so this cannot be change without rewriting that code.
+; so this cannot be changed without rewriting that code.
 squaresize = #$07
 framewidth = #$0A  ; 10 squares
 frameheight = #$14  ; 20 squares
@@ -38,11 +38,85 @@ fieldtop = framebottom - (squaresize * frameheight) + 1
 frametop = fieldtop - 1
 fieldright = frameleft + (squaresize * framewidth) - 1
 frameright = fieldright + 1
+; these are only to be used in leaf routines (with no JSRs)
+temp1 equ $06
+temp2 = $07
+temp3 = $08
+temp4 = $09
+squaremask = #$3f  ; for turning on screen byte except rightmost pixel
+bytemask = #$7f  ; for turning on an entire screen byte
+
 
 drawsquare
 ; draws square at x = x, y = y
+
 ; these numbers are in FIELD COORDINATES with origin at lower left
-; L = f
+
+; the top row and rightmost column are not filled, to create a
+; "grid" effect between squares.
+
+; SCREEN COORDINATE CALCS:
+; Squaresize = the number of horizontal dots per memory byte,
+; and fieldleft is byte-aligned.
+; Therefore, given a start-of-row byte, to
+; to find the byte for the Xth square in that row, the calculation is:
+; start-of-row address + byte offset of fieldleft
+;                      + byte offset of (X * squaresize)
+; = start-of-row address + (fieldleft / 7) + X
+;
+; Squaresize = 7. Therefore, to find the start-of-row byte for
+; the Yth square, the calc is:
+; yaddress(fieldbottom - (7 * Y))
+; = yaddress(fieldbottom - ((8 - 1) * Y))
+; = yaddress(fieldbottom - (8*Y - Y))
+; = yaddress(fieldbottom - ((Y << 3) - Y))
+;
+; Calculate start-of-row byte for bottom row of square (smart version)
+    tya
+    asl
+    asl
+    asl
+    sty temp1
+    sec
+    sbc temp1
+    ; negate A
+    eor #$ff
+    ldy #$01
+    sty temp1
+    clc
+    adc temp1
+    clc
+    adc #fieldbottom
+    ; now A contains the y coordinate of the bottom
+    ; row of the square. Store it so that we can
+    ; decrement it later to draw the higher rows
+    ; of the square
+    sta temp2
+    ; Next, calculate the offset from the start-of-row byte.
+    lda #fieldleft / 7
+    stx temp1
+    clc
+    adc temp1
+    sta temp1
+    lda #squaresize - 1
+    sta temp3
+    ; temp1 = offset to add to start-of-row byte
+    ; temp2 = y coordinate of bottom row
+    ; temp3 = row counter
+squareloop
+    lda temp2
+    jsr yaddress
+    ldy temp1
+    lda #squaremask
+    sta (gbas),y
+    dec temp2
+    dec temp3
+    bne squareloop
+rts
+
+
+
+
 
 
 ;external routines
@@ -102,12 +176,20 @@ start   jsr hgr
         ldy (#framebottom + #frametop) / 2
         jsr hlin
 
+        ; example of coloring a single byte
         lda (#frametop + #framebottom) / 2 + 2
         jsr yaddress
-        lda #$7F  ; all dots on
+        lda #bytemask  ; all dots on
         ldy #fieldleft / 7
         sta (gbas),y
 
+        ; example of drawing squares 0,0 and 1,1
+        ldx #$00
+        ldy #$00
+        jsr drawsquare
+        ldx #$01
+        ldy #$01
+        jsr drawsquare
     rts
 
 ; utilities
