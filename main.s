@@ -3,7 +3,6 @@
     ; DONE 1. Frame
     ; 2. I shape and rotation data
     ;   a. field memory representation
-    ;   b. function to draw field on screen
     ;   c. shape memory representation
     ;   d. rotation memory representation
     ;   e. function to draw current shape at current location
@@ -60,14 +59,42 @@ fieldptr = $ee
 fieldptrhi = $ef
 squaremask = #$3f  ; for turning on screen byte except rightmost pixel
 bytemask = #$7f  ; for turning on an entire screen byte
-fieldmapptrhi = #$80  ; fieldmap starts at $8000
-fieldmapptrlo = #$00
+fieldptrhilit = #$80  ; fieldmap starts at $8000
+fieldptrlolit = #$00
+
+
+; shape table encoding:
+; The two highest bits tell how to rotate the shape.
+; 00 = keep shape number the same (only for square)
+; 01 = incrememt shape number
+; 10 = decrement shape number
+; 11 = decrement shape number 3 times
+; The next 6 bits tell you where to move from the
+; starting square to draw the other three squares.
+; 00 = move right
+; 01 = move left
+; 10 = move up
+; 11 = move down and right
+
+
+shapetable
+    ; shape 0: 01101010 = 6A
+    ; |
+    ; |
+    ; |
+    ; |
+    hex $6a
+    ; shape 1: 10000000 = 80
+    ; ----
+    hex $80
+
+
 
 
 initfieldmap
-    lda #fieldmapptrlo
+    lda #fieldptrlolit
     sta fieldptr
-    lda #fieldmapptrhi
+    lda #fieldptrhilit
     sta fieldptrhi
     ldx #fieldheight + 4  ; add 4 extra rows above top of screen
     ldy #$00
@@ -81,6 +108,12 @@ initfieldmaploopleft
     dex
     bne initfieldmaploopleft
     rts
+
+
+drawshape
+; draws the shape with ID stored in $curshape
+; at location stored in $curshapex, $curshapey (field coordinates)
+
 
 
 drawsquare
