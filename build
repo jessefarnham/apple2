@@ -1,1 +1,4 @@
+# Download dsk image from here first:
+# https://mirrors.apple2.org.za/ftp.apple.asimov.net/images/masters/emptyDSK_Dos33.zip
+
 dasm main.s && diskm8 -file-put a.out -with-disk disk.dsk
